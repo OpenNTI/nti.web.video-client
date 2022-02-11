@@ -16,13 +16,12 @@ export default class BaseModel {
 		this: T,
 		raw: object
 	) {
-		console.log("Creating: ", raw);
 		return new this(raw) as InstanceType<T>;
 	}
 
-	constructor(raw: object) {
-		const parsed = (this.constructor as typeof BaseModel).Schema.parse(raw);
+	data: any;
 
-		Object.assign(this, parsed);
+	constructor(raw: object) {
+		this.data = (this.constructor as typeof BaseModel).Schema.parse(raw);
 	}
 }

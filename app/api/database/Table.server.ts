@@ -34,14 +34,14 @@ export default class Table<T> {
 		const table = await this.setupTable();
 		const resp = await table.get(key);
 
-		return this.parse(resp);
+		return resp ? this.parse(resp) : null;
 	}
 
 	async put(data: object) {
 		const table = await this.setupTable();
 		const resp = await table.put(data);
 
-		return this.parse(resp);
+		return resp ? this.parse(resp) : null;
 	}
 
 	async update(query: object) {

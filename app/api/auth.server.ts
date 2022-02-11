@@ -58,6 +58,10 @@ export const authenticateUser = async (
 
 		if (!currentUser) {
 			currentUser = await User.getForOauth(profile.id, service);
+
+			if (!currentUser) {
+				throw new Error("Unable to get user");
+			}
 			session.set("userId", setCached(currentUser));
 		}
 
@@ -66,7 +70,6 @@ export const authenticateUser = async (
 			refreshToken: refreshToken,
 		});
 	} catch (e) {
-		console.log("Setting Current User Failed: ", e);
 		throw redirect(redirects.failure);
 	}
 

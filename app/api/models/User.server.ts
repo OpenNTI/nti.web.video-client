@@ -23,26 +23,37 @@ class OauthId extends Base {
 
 	static async findOrCreate(profileId: string, service: Service) {
 		const table = this.getTable();
-
-		console.log("Getting OauthId: ", profileId, service);
 		const existing = await table.get({ profileId, service });
 
 		if (existing) {
 			return existing;
 		}
-		console.log("Creating OauthID: ", profileId, service);
+
 		return table.put({ profileId, service, userId: uuid() });
 	}
 
-	profileId: string = ""; //This is initialized in the constructor, but I can't convince typescript that it is...
-	service: string = "";
-	userId: string = "";
+	data: z.infer<typeof OauthId.Schema> | undefined;
+
+	get profileId() {
+		return this.data?.profileId ?? "";
+	}
+
+	get service() {
+		return this.data?.service ?? "";
+	}
+
+	get userId() {
+		return this.data?.userId ?? "";
+	}
 }
 
 export default class User {
 	static async getForOauth(profileId: string, service: Service) {
-		console.log("Getting Oauth User: ", profileId, service);
 		const oauthId = await OauthId.findOrCreate(profileId, service);
+
+		if (!oauthId) {
+			return null;
+		}
 
 		return new User(oauthId.userId);
 	}
@@ -68,7 +79,9 @@ export default class User {
 		if (!this.credentials.has(service)) {
 			const cred = await Credential.getCredential(this.userId, service);
 
-			this.credentials.set(service, cred);
+			if (cred) {
+				this.credentials.set(service, cred);
+			}
 		}
 
 		return this.credentials.get(service);

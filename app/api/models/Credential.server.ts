@@ -17,7 +17,7 @@ export default class Credential extends Base {
 		userId: z.string(),
 		service: z.enum(["google"]),
 		accessToken: z.string(),
-		refreshToken: z.string(),
+		// refreshToken: z.string().optional(),
 	});
 
 	static async addOrUpdate(userId: string, service: Service, tokens: Tokens) {
@@ -29,11 +29,9 @@ export default class Credential extends Base {
 		if (existing) {
 			await table.update({
 				Key: key,
-				UpdateExpression:
-					"SET accessToken = :accessToken, refreshToken = :refreshToken",
+				UpdateExpression: "SET accessToken = :accessToken",
 				ExpressionAttributeValues: {
 					":accessToken": tokens.accessToken,
-					":refreshToken": tokens.refreshToken,
 				},
 			});
 		} else {
@@ -50,5 +48,19 @@ export default class Credential extends Base {
 		const existing = await table.get({ userId, service });
 
 		return existing;
+	}
+
+	data: z.infer<typeof Credential.Schema> | null = null;
+
+	get userId() {
+		return this.data?.userId ?? "";
+	}
+
+	get service() {
+		return this.data?.service ?? "";
+	}
+
+	get accessToken() {
+		return this.data?.accessToken ?? "";
 	}
 }
