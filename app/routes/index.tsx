@@ -1,12 +1,26 @@
+import type { LoaderFunction } from "remix";
+import { useLoaderData, redirect } from "remix";
 import Button from "@mui/material/Button";
 import Text from "@mui/material/Typography";
 
+import { getSessionUser } from "~/api/auth.server";
+
+export const loader: LoaderFunction = async ({ request }) => {
+	const user = await getSessionUser(request);
+
+	if (!user) {
+		throw redirect("/login");
+	}
+
+	return { user: user.userId };
+};
+
 export default function Index() {
+	const { user } = useLoaderData();
+
 	return (
 		<div>
-			<Text variant="h1">
-				Welcome to the NextThought Video Production Helper App
-			</Text>
+			<Text variant="h1">Welcome {user}</Text>
 			<Text variant="body1">
 				For more information please contact{" "}
 				<Button variant="text">support.</Button>

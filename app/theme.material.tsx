@@ -6,6 +6,11 @@ const CacheKey = "nt-css";
 export const cache = createEmotionCache({ key: CacheKey });
 
 export const Theme = createTheme({
+	palette: {
+		background: {
+			default: "#fbfbfb",
+		},
+	},
 	components: {
 		MuiButtonBase: {
 			defaultProps: {

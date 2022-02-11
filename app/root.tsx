@@ -9,7 +9,7 @@ import {
 import type { MetaFunction } from "remix";
 import { CssBaseline } from "@mui/material";
 
-import { Provider } from "./Theme.material";
+import { Provider } from "./theme.material";
 
 export const meta: MetaFunction = () => {
 	return { title: "NextThought" };
@@ -18,8 +18,8 @@ export const meta: MetaFunction = () => {
 export default function App() {
 	return (
 		<Document>
-			<CssBaseline />
 			<Provider>
+				<CssBaseline />
 				<Outlet />
 			</Provider>
 		</Document>

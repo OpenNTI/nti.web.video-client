@@ -3,7 +3,7 @@ import createEmotionServer from "@emotion/server/create-instance";
 import { RemixServer } from "remix";
 import type { EntryContext } from "remix";
 
-import { cache } from "./Theme.material";
+import { cache } from "./theme.material";
 
 function renderPage(html: string, css: string) {
 	const page = html.replace("__cfg:STYLES__", css);
