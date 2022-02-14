@@ -9,13 +9,14 @@ export type Tokens = {
 
 export enum Service {
 	google = "google",
+	wrike = "wrike",
 }
 
 export default class Credential extends Base {
 	static TableName = "Credentials";
 	static Schema = Base.Schema.extend({
 		userId: z.string(),
-		service: z.enum(["google"]),
+		service: z.enum(["google", "wrike"]),
 		accessToken: z.string(),
 		// refreshToken: z.string().optional(),
 	});

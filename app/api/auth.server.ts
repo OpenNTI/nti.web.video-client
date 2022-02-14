@@ -1,7 +1,9 @@
 import { redirect } from "remix";
 import { Authenticator } from "remix-auth";
 import { GoogleStrategy } from "remix-auth-google";
+import { OAuth2Strategy } from "remix-auth-oauth2";
 
+import { WrikeStrategy } from "./auth-strategies/Wrike";
 import User, { setCached } from "./models/User.server";
 import { Service } from "./models/Credential.server";
 import { sessionStorage } from "./session.server";
@@ -19,6 +21,20 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 			async (profile) => profile
 		),
 		Service.google
+	);
+}
+
+if (process.env.WRIKE_CLIENT_ID && process.env.WRIKE_CLIENT_SECRET) {
+	auth.use(
+		new WrikeStrategy(
+			{
+				clientID: process.env.WRIKE_CLIENT_ID,
+				clientSecret: process.env.WRIKE_CLIENT_SECRET,
+				callbackURL: "http://localhost:3333/auth/wrike/callback",
+			},
+			async (profile) => profile
+		),
+		Service.wrike
 	);
 }
 
@@ -48,6 +64,8 @@ export const authenticateUser = async (
 		request.headers.get("Cookie")
 	);
 
+	console.log(profile);
+
 	try {
 		if (!profile.id) {
 			console.log("NO ID?!?!: ", profile);
@@ -57,11 +75,13 @@ export const authenticateUser = async (
 		let currentUser = await getSessionUser(request);
 
 		if (!currentUser) {
+			console.log("Setting Current User: ", profile.id, service);
 			currentUser = await User.getForOauth(profile.id, service);
 
 			if (!currentUser) {
 				throw new Error("Unable to get user");
 			}
+
 			session.set("userId", setCached(currentUser));
 		}
 
