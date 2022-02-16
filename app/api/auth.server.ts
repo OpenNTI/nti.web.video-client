@@ -3,7 +3,7 @@ import { Authenticator } from "remix-auth";
 import { GoogleStrategy } from "remix-auth-google";
 import { OAuth2Strategy } from "remix-auth-oauth2";
 
-import { WrikeStrategy } from "./auth-strategies/Wrike";
+import { WrikeStrategy } from "./auth-strategies/Wrike.server";
 import User, { setCached } from "./models/User.server";
 import { Service } from "./models/Credential.server";
 import { sessionStorage } from "./session.server";
@@ -31,6 +31,7 @@ if (process.env.WRIKE_CLIENT_ID && process.env.WRIKE_CLIENT_SECRET) {
 				clientID: process.env.WRIKE_CLIENT_ID,
 				clientSecret: process.env.WRIKE_CLIENT_SECRET,
 				callbackURL: "http://localhost:3333/auth/wrike/callback",
+				scope: "Default,wsReadWrite",
 			},
 			async (profile) => profile
 		),

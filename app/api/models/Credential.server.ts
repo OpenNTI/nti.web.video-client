@@ -51,7 +51,7 @@ export default class Credential extends Base {
 		return existing;
 	}
 
-	data: z.infer<typeof Credential.Schema> | null = null;
+	data: z.infer<typeof Credential.Schema> | undefined;
 
 	get userId() {
 		return this.data?.userId ?? "";
