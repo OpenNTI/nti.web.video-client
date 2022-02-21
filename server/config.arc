@@ -1,5 +1,5 @@
 @aws
 runtime nodejs14.x
+timeout 30
 # memory 1152
-# timeout 30
 # concurrency 1

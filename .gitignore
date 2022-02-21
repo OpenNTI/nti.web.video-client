@@ -3,7 +3,7 @@ node_modules
 /.env
 
 /.cache
-/server/build
+/server/index.js
 /public/build
 
 sam.json
