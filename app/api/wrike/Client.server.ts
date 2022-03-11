@@ -1,10 +1,23 @@
 import type Credential from "../models/Credential.server";
+import { getSessionUser } from "../auth.server";
+import { Service } from "../models/Credential.server";
 
+import type { WrikeCustomFieldClass } from "./CustomField.server";
+import { createCustomFieldClass } from "./CustomField.server";
 import type { WrikeFolderClass } from "./Folder.server";
 import { createFolderClass } from "./Folder.server";
 import type { WrikeProjectClass } from "./Project.server";
 import { createProjectClass } from "./Project.server";
-import { createTaskClass, WrikeTaskClass } from "./Task.server";
+import type { WrikeSpaceClass } from "./Space.server";
+import { createSpaceClass } from "./Space.server";
+import type { WrikeTaskClass } from "./Task.server";
+import { createTaskClass } from "./Task.server";
+import type { WrikeTaskTemplateClass } from "./TaskTemplate.server";
+import { createTaskTemplateClass } from "./TaskTemplate.server";
+import type { WrikeVideoBatchTaskClass } from "./VideoBatchTask.server";
+import { createVideoBatchTaskClass } from "./VideoBatchTask.server";
+import type { WrikeWorkFlowClass } from "./Workflow.server";
+import { createWorkFlowClass } from "./Workflow.server";
 
 const BaseURL = "https://www.wrike.com/api/v4/";
 
@@ -27,14 +40,35 @@ const encodeValue = (value: any): string => {
 };
 
 export class WrikeClient {
-	Project: WrikeProjectClass;
+	static async forSession(request: Request) {
+		const user = await getSessionUser(request);
+		const wrikeCred = await user?.getCredentials(Service.wrike);
+
+		if (!wrikeCred) {
+			throw new Response("Forbidden", { status: 403 });
+		}
+
+		return new WrikeClient(wrikeCred);
+	}
+
+	CustomField: WrikeCustomFieldClass;
 	Folder: WrikeFolderClass;
+	Project: WrikeProjectClass;
+	Space: WrikeSpaceClass;
 	Task: WrikeTaskClass;
+	TaskTemplate: WrikeTaskTemplateClass;
+	VideoBatch: WrikeVideoBatchTaskClass;
+	Workflow: WrikeWorkFlowClass;
 
 	constructor(private credentials: Credential) {
-		this.Project = createProjectClass(this);
+		this.CustomField = createCustomFieldClass(this);
 		this.Folder = createFolderClass(this);
+		this.Project = createProjectClass(this);
+		this.Space = createSpaceClass(this);
 		this.Task = createTaskClass(this);
+		this.TaskTemplate = createTaskTemplateClass(this);
+		this.VideoBatch = createVideoBatchTaskClass(this);
+		this.Workflow = createWorkFlowClass(this);
 	}
 
 	private async fetch<T = {}>(

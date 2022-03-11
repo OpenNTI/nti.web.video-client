@@ -4,12 +4,20 @@ export interface WrikeFolderInstance {
 	id: string | undefined;
 	title: string;
 	project: boolean;
+
 	save: (config: FolderSaveConfig) => Promise<WrikeFolderInstance>;
+
+	getSubFolders: () => Promise<WrikeFolderInstance[]>;
 }
 
 export interface WrikeFolderClass {
-	// new (): WrikeFolderInstance;
+	new (raw: FolderRaw): WrikeFolderInstance;
 
+	fromSpace: (
+		spaceId: string,
+		params: Record<string, any>
+	) => Promise<WrikeFolderInstance[]>;
+	fromIDs: (ids: string[]) => Promise<WrikeFolderInstance[]>;
 	fromPermaLink: (id: string) => Promise<WrikeFolderInstance>;
 	create: (
 		title: string,
@@ -37,6 +45,26 @@ type FolderSaveConfig = {
 
 export function createFolderClass(client: WrikeClient): WrikeFolderClass {
 	return class WrikeFolderClient implements WrikeFolderInstance {
+		static async fromSpace(
+			spaceId: string,
+			params: Record<string, any>
+		): Promise<WrikeFolderInstance[]> {
+			const resp = await client.get<TreeResponse>(
+				`/spaces/${spaceId}/folders`,
+				params
+			);
+
+			return resp.data.map((r) => new WrikeFolderClient(r));
+		}
+
+		static async fromIDs(ids: string[]): Promise<WrikeFolderInstance[]> {
+			const resp = await client.get<TreeResponse>(
+				`folders/${ids.join(",")}`
+			);
+
+			return resp.data.map((r) => new WrikeFolderClient(r));
+		}
+
 		static async fromPermaLink(link: string): Promise<WrikeFolderInstance> {
 			const tree = await client.get<TreeResponse>("folders", {
 				permalink: link,
@@ -55,18 +83,22 @@ export function createFolderClass(client: WrikeClient): WrikeFolderClass {
 			return new WrikeFolderClient({ title, description, project });
 		}
 
-		id: string | undefined;
-		title: string;
-		description: string | undefined;
-		project: boolean;
-		childIds: string[] | undefined;
+		constructor(private raw: FolderRaw) {}
 
-		constructor(folder: FolderRaw) {
-			this.id = folder.id;
-			this.title = folder.title;
-			this.description = folder.description;
-			this.project = folder.project;
-			this.childIds = folder.childIds;
+		get id() {
+			return this.raw.id;
+		}
+		get title() {
+			return this.raw.title;
+		}
+		get description() {
+			return this.raw.description;
+		}
+		get project() {
+			return this.raw.project;
+		}
+		get childIds() {
+			return this.raw.childIds;
 		}
 
 		async save(config: FolderSaveConfig) {
@@ -79,13 +111,22 @@ export function createFolderClass(client: WrikeClient): WrikeFolderClass {
 				}
 			);
 
-			this.id = resp.id;
-			this.title = resp.title;
-			this.description = resp.description;
-			this.project = resp.project;
-			this.childIds = resp.childIds;
+			this.raw = resp;
 
 			return this;
+		}
+
+		async getSubFolders() {
+			if (!this.id) {
+				throw new Error("Unable to get sub tree without folder id");
+			}
+
+			const resp = await client.get<TreeResponse>(
+				`/folders/${this.id}/folders`,
+				{ project: false }
+			);
+
+			return resp.data.map((raw) => new WrikeFolderClient(raw));
 		}
 	};
 }

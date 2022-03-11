@@ -2,27 +2,27 @@ import * as csv from "@fast-csv/parse";
 
 import type { WrikeClient } from "./Client.server";
 import type { WrikeFolderInstance } from "./Folder.server";
-import type { WrikeTaskInstance, TaskRaw } from "./Task.server";
+import type { TaskRaw } from "./Task.server";
+import type {
+	WrikeTaskTemplateInstance,
+	CloneData,
+} from "./TaskTemplate.server";
 
 type CSVRow = {
 	video: string;
 	template: string;
-	title: string;
-};
+} & CloneData;
 
 type ProjectSaveConfig = {
 	templatePermaLink: string;
 };
 
 interface VideoProject {
-	addTask: (template: string, properties: TaskRaw) => void;
-	save: (config: {
-		project: WrikeProjectInstance;
-		templates: WrikeFolderInstance;
-	}) => void;
+	addTask: (template: string, properties: CloneData) => void;
+	save: (config: { project: WrikeProjectInstance }) => void;
 }
 
-interface WrikeProjectInstance {
+export interface WrikeProjectInstance {
 	folder: WrikeFolderInstance | undefined;
 	video: (name: string) => VideoProject | undefined;
 	importCSV: (
@@ -30,30 +30,30 @@ interface WrikeProjectInstance {
 		options: csv.ParserOptionsArgs
 	) => Promise<WrikeProjectInstance>;
 	save: (config: ProjectSaveConfig) => Promise<WrikeProjectInstance>;
+	findTemplate: (name: string) => Promise<WrikeTaskTemplateInstance | null>;
 }
 
-export interface WrikeProjectClass {
-	fromPermaLink: (link: string) => Promise<WrikeProjectInstance>;
+export interface WrikeProjectClass<T = WrikeProjectInstance> {
+	new (config: { folder: WrikeFolderInstance }): T;
+	fromPermaLink: (link: string) => Promise<T>;
 }
 
 export function createProjectClass(client: WrikeClient): WrikeProjectClass {
-	class Video {
+	class Video implements VideoProject {
 		private tasks: VideoTask[] = [];
 
 		constructor(public name: string) {}
 
-		addTask(template: string, properties: TaskRaw) {
+		addTask(template: string, properties: CloneData) {
 			this.tasks.push(new VideoTask(template, properties));
 		}
 
-		async save(config: {
-			project: WrikeProjectInstance;
-			templates: WrikeFolderInstance;
-		}) {
-			const { project, templates } = config;
+		async save(config: { project: WrikeProjectInstance }) {
+			const { project } = config;
 
 			const videoTask = client.Task.fromRaw({ title: this.name });
-			const templateCache: Map<string, WrikeTaskInstance> = new Map();
+
+			console.log("Saving Video: ", this.name, this.tasks.length);
 
 			await videoTask.save({ folder: project.folder });
 
@@ -61,19 +61,17 @@ export function createProjectClass(client: WrikeClient): WrikeProjectClass {
 				throw new Error("Wheres the video id");
 			}
 
-			for (let task of this.tasks) {
-				const template = templateCache.has(task.template)
-					? templateCache.get(task.template)
-					: await client.Task.fromTitle(task.template, templates);
+			for (let task of this.tasks.reverse()) {
+				const template = await project.findTemplate(task.template);
 
 				if (!template) {
 					continue;
 				}
 
-				const subTask = client.Task.fromTemplate(template, {
-					...task.properties,
-					superTasks: [videoTask.id],
-				});
+				const subTask = await template.clone(
+					task.properties,
+					videoTask
+				);
 
 				await subTask.save({ folder: project.folder });
 			}
@@ -81,7 +79,7 @@ export function createProjectClass(client: WrikeClient): WrikeProjectClass {
 	}
 
 	class VideoTask {
-		constructor(public template: string, public properties: TaskRaw) {}
+		constructor(public template: string, public properties: CloneData) {}
 	}
 
 	return class WrikeProjectClient implements WrikeProjectInstance {
@@ -97,7 +95,12 @@ export function createProjectClass(client: WrikeClient): WrikeProjectClass {
 			return new WrikeProjectClient({ folder });
 		}
 
-		private videos: Map<string, Video> = new Map();
+		private videos: Map<string, VideoProject> = new Map();
+		private templateCache: Map<
+			string,
+			Promise<WrikeTaskTemplateInstance | null>
+		> = new Map();
+
 		public folder: WrikeFolderInstance;
 
 		constructor({ folder }: { folder: WrikeFolderInstance }) {
@@ -134,20 +137,48 @@ export function createProjectClass(client: WrikeClient): WrikeProjectClass {
 			return this.videos.get(name);
 		}
 
-		async save(config: ProjectSaveConfig) {
-			const templateFolder = await client.Folder.fromPermaLink(
-				config.templatePermaLink
-			);
-
+		async save(config?: ProjectSaveConfig) {
 			if (!this.folder.id) {
 				throw new Error("Unable to find projects folder");
 			}
 
-			for (let video of this.videos.values()) {
-				await video.save({ project: this, templates: templateFolder });
-			}
+			console.log("Saving Videos: ", Array.from(this.videos.values()));
+
+			await Promise.all(
+				Array.from(this.videos.values()).map((v) =>
+					v.save({ project: this })
+				)
+			);
 
 			return this;
+		}
+
+		async findTemplate(
+			name: string
+		): Promise<WrikeTaskTemplateInstance | null> {
+			if (!this.templateCache.has(name)) {
+				const loader = async () => {
+					const subFolders = await this.folder.getSubFolders();
+					const templateFolder = subFolders.find(
+						(f) => f.title === "templates"
+					);
+
+					if (!templateFolder) {
+						return null;
+					}
+
+					const template = await client.TaskTemplate.fromTitle(
+						name,
+						templateFolder
+					);
+
+					return template;
+				};
+
+				this.templateCache.set(name, loader());
+			}
+
+			return this.templateCache.get(name) ?? null;
 		}
 	};
 }
