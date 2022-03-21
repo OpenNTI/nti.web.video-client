@@ -48,7 +48,7 @@ export class WrikeClient {
 			throw new Response("Forbidden", { status: 403 });
 		}
 
-		return new WrikeClient(wrikeCred);
+		return new WrikeClient(wrikeCred, user?.userId);
 	}
 
 	CustomField: WrikeCustomFieldClass;
@@ -60,7 +60,10 @@ export class WrikeClient {
 	VideoBatch: WrikeVideoBatchTaskClass;
 	Workflow: WrikeWorkFlowClass;
 
-	constructor(private credentials: Credential) {
+	constructor(
+		private credentials: Credential,
+		public userId: string | undefined
+	) {
 		this.CustomField = createCustomFieldClass(this);
 		this.Folder = createFolderClass(this);
 		this.Project = createProjectClass(this);

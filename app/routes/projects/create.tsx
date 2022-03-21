@@ -62,10 +62,11 @@ export const action: ActionFunction = async ({ request }) => {
 	);
 
 	const file = formData.get("project-file") as File;
-
 	const text = await file.text();
 
-	console.log("Got Form Data: ", test);
+	console.log("Got Form Data: ", text);
+
+	return null;
 };
 
 export default function Project() {
@@ -160,6 +161,7 @@ export default function Project() {
 						>
 							<FileInput
 								name="project-file"
+								storeAsFile
 								files={files}
 								onupdatefiles={(items) =>
 									setFiles(items.map((f) => f.file))
