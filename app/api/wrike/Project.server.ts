@@ -24,9 +24,7 @@ export type WrikeProjectClass = {
 	create(title: string, parent: WrikeFolderInstance): WrikeProjectInstance;
 };
 
-export default function createProjectClass(
-	client: WrikeClient
-): WrikeProjectClass {
+export function createProjectClass(client: WrikeClient): WrikeProjectClass {
 	return class WrikeProjectClient implements WrikeProjectInstance {
 		static create(title: string, parent: WrikeFolderInstance) {
 			return new WrikeProjectClient({ title }, parent);
