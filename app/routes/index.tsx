@@ -16,10 +16,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 		throw redirect("/login");
 	}
 
-	if (!(await user.hasCredentials(Service.wrike))) {
-		throw redirect("/connect");
-	}
-
 	return { user: user.userId };
 };
 
@@ -32,6 +28,9 @@ export default function Index() {
 				</Link>
 				<Link to="/video-batch">
 					<Button variant="contained">Video Batch</Button>
+				</Link>
+				<Link to="tasks/asset-inventory">
+					<Button variant="contained">Asset Inventory</Button>
 				</Link>
 			</Stack>
 		</Page>
