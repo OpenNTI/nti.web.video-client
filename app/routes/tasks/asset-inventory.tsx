@@ -73,7 +73,10 @@ export const action: ActionFunction = async ({ request }) => {
 	);
 
 	const file = formData.get("report") as File;
-	const inventory = (await getAssetInventory(file)).sort(
+	const report = await parseReport(file);
+
+	const projectName = report["Project name"];
+	const inventory = (await getAssetInventory(report)).sort(
 		(a, b) => VendorOrder.indexOf(a.vendor) - VendorOrder.indexOf(b.vendor)
 	);
 
@@ -90,7 +93,10 @@ export const action: ActionFunction = async ({ request }) => {
 		],
 	});
 
-	return json({ csv });
+	return json({
+		csv,
+		projectName: projectName[0].trim().replace(/\..*$/, ""),
+	});
 };
 
 export default function AssetInventory() {
@@ -118,14 +124,12 @@ export default function AssetInventory() {
 						alignItems="center"
 						justifyItems="center"
 					>
-						<Button variant="contained">
-							<a
-								href={downloadURL}
-								download="asset-inventory.csv"
-							>
-								Download
-							</a>
-						</Button>
+						<a
+							href={downloadURL}
+							download={`${action?.projectName}-asset-inventory.csv`}
+						>
+							<Button variant="contained">Download</Button>
+						</a>
 					</Stack>
 				)}
 				{!showSaving ? null : (
@@ -174,8 +178,6 @@ export default function AssetInventory() {
 const getHTML = async (url: string) => {
 	const resp = await fetch(url);
 	const text = await resp.text();
-
-	console.log(text);
 
 	return HTMLParser.parse(text, {
 		blockTextElements: { style: false },
@@ -285,11 +287,22 @@ const InfoGetters = [
 			};
 		},
 	},
+	{
+		//Artlist
+		handles: (filename: string, ext: string) =>
+			filename.indexOf("Artlist") !== -1,
+		info: (filename: string, ext: string) => {
+			return {
+				vendor: "Artlist.io",
+			};
+		},
+	},
 ];
 
-async function getAssetInventory(file: File): Promise<Inventory[]> {
-	const report = await parseReport(file);
-	const sources = report["Collected source files:"] as string[];
+async function getAssetInventory(
+	report: Record<string, string[]>
+): Promise<Inventory[]> {
+	const sources = report["Collected source files"] as string[];
 
 	const inventories = sources.reduce(
 		(acc: Promise<Inventory>[], source: string) => {
@@ -340,8 +353,15 @@ async function parseReport(file: File) {
 		const lineText = parts[depth].trim();
 
 		if (depth === 0) {
-			groups[lineText] = groups[lineText] ?? [];
-			currentSection = lineText;
+			const [name, value] = lineText.split(":");
+
+			groups[name] = groups[name] ?? [];
+
+			if (value?.trim()) {
+				groups[name].push(value);
+			}
+
+			currentSection = name;
 		} else {
 			if (!currentSection) {
 				throw new Error("Invalid Report");
