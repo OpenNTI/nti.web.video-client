@@ -207,9 +207,9 @@ const headlineFromImageObect = (obj: ImageObject) => obj.description;
 const creditlineFromImageObject = (obj: ImageObject) => obj.author.name;
 
 const TypesToExtension = {
-	video: [".mp4", ".mov"],
-	photo: [".jpeg", ".png", ".tif", ".webm"],
-	audio: [".mp3"],
+	video: [".mp4", ".mov", ".mpg"],
+	photo: [".jpeg", ".jpg", ".png", ".tif", ".webm"],
+	audio: [".mp3", ".wav"],
 };
 
 const getTypeFromExtension = (
@@ -225,6 +225,15 @@ const getTypeFromExtension = (
 };
 
 const GettyRegex = /^(gettyimages|GettyImages)\-(\d+)/;
+const ShutterRegex = /^(shutterstock)_(\d+)/;
+
+const SSArtistTitleBlackList: Record<string, boolean> = {
+	contributor: true,
+	none: true,
+};
+
+const Capitalize = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
+const TitleCase = (s: string) => s.split(" ").map(Capitalize).join(" ");
 
 const InfoGetters = [
 	{
@@ -261,18 +270,28 @@ const InfoGetters = [
 				url,
 
 				headline: assetDetails.asset.title,
-				creditline: assetDetails.asset.photographer,
+				creditline: SSArtistTitleBlackList[
+					assetDetails.asset.artistTitle
+				]
+					? assetDetails.asset.photographer
+					: `${assetDetails.asset.photographer} / ${TitleCase(
+							assetDetails.asset.artistTitle
+					  )}`,
 				collection: assetDetails.asset.collectionDisplayName,
 			};
 		},
 	},
 	{
 		//Shutterstock
-		handles: (filename: string, ext: string) =>
-			filename.startsWith("shutterstock"),
+		handles: (filename: string, ext: string) => ShutterRegex.test(filename),
 		info: async (filename: string, ext: string) => {
-			const parts = filename.split("_");
-			const id = parts[parts.length - 1];
+			const match = filename.match(ShutterRegex);
+			const id = match?.[2];
+
+			if (!id) {
+				throw new Error("Unable to get ShutterStock id: ${filename}");
+			}
+
 			const url = `https://www.shutterstock.com/image-photo/${id}`;
 
 			const imageObject = await getImageObjectLinkData(url);
@@ -291,7 +310,7 @@ const InfoGetters = [
 		//Artlist
 		handles: (filename: string, ext: string) =>
 			filename.indexOf("Artlist") !== -1,
-		info: (filename: string, ext: string) => {
+		info: async (filename: string, ext: string) => {
 			return {
 				vendor: "Artlist.io",
 			};

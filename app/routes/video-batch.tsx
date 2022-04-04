@@ -13,7 +13,6 @@ import { getSessionUser } from "~/api/auth.server";
 import { Service } from "~/api/models/Credential.server";
 import { WrikeClient } from "~/api/wrike/Client.server";
 import Page from "~/components/Page";
-import { Upload } from "@mui/icons-material";
 
 export const loader: LoaderFunction = async ({ request }) => {
 	const user = await getSessionUser(request);
