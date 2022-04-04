@@ -227,7 +227,7 @@ const getTypeFromExtension = (
 const GettyRegex = /^(gettyimages|GettyImages)\-(\d+)/;
 const ShutterRegex = /^(shutterstock)_(\d+)/;
 
-const SSArtistTitleBlackList: Record<string, boolean> = {
+const GettyArtistTitleBlackList: Record<string, boolean> = {
 	contributor: true,
 	none: true,
 };
@@ -270,9 +270,7 @@ const InfoGetters = [
 				url,
 
 				headline: assetDetails.asset.title,
-				creditline: SSArtistTitleBlackList[
-					assetDetails.asset.artistTitle
-				]
+				creditline: Getty[assetDetails.asset.artistTitle]
 					? assetDetails.asset.photographer
 					: `${assetDetails.asset.photographer} / ${TitleCase(
 							assetDetails.asset.artistTitle
