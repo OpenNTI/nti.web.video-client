@@ -3,11 +3,13 @@ import {
 	ActionFunction,
 	unstable_createMemoryUploadHandler,
 	unstable_parseMultipartFormData,
+	useTransition,
 } from "remix";
 import { redirect, Form } from "remix";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
 
 import { getSessionUser } from "~/api/auth.server";
 import { Service } from "~/api/models/Credential.server";
@@ -66,30 +68,46 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function VideoBatch() {
+	const transition = useTransition();
+
 	return (
 		<Page title="Upload a video batch CSV file:">
 			<Form method="post" encType="multipart/form-data">
-				<Stack spacing={2} alignItems="center" justifyItems="center">
-					<TextField
-						name="template-folder"
-						label="Template Folder (PermaLink)"
-						variant="outlined"
-					/>
-					<TextField
-						name="batch-task"
-						label="Batch Task (PermaLink)"
-						variant="outlined"
-					/>
-					<TextField
-						name="location"
-						label="Folder (PermaLink)"
-						variant="outlined"
-					/>
-					<input type="file" name="batch" />
-					<Button variant="contained" type="submit">
-						Upload
-					</Button>
-				</Stack>
+				{transition.state === "submitting" ? (
+					<Stack
+						spacing={2}
+						alignItems="center"
+						justifyContent="center"
+					>
+						<CircularProgress size="3rem" />
+					</Stack>
+				) : (
+					<Stack
+						spacing={2}
+						alignItems="center"
+						justifyItems="center"
+					>
+						<TextField
+							name="template-folder"
+							label="Template Folder (PermaLink)"
+							variant="outlined"
+						/>
+						<TextField
+							name="batch-task"
+							label="Batch Task (PermaLink)"
+							variant="outlined"
+						/>
+						<TextField
+							name="location"
+							label="Folder (PermaLink)"
+							variant="outlined"
+						/>
+						<input type="file" name="batch" />
+						<Button variant="contained" type="submit">
+							Upload
+						</Button>
+					</Stack>
+				)}
 			</Form>
 		</Page>
 	);
