@@ -28,6 +28,7 @@
     "@types/mustache": "^4.1.2",
     "dotenv": "^16.0.0",
     "filepond": "^4.30.3",
+    "googleapis": "^99.0.0",
     "html-metadata-parser": "^2.0.4",
     "mustache": "^4.2.0",
     "node-html-parser": "^5.3.3",

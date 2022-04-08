@@ -416,7 +416,7 @@ function handleRequest(request, responseStatusCode, responseHeaders, remixContex
   });
 }
 
-// route:/Users/andrew.ligon/video-client/app/root.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/root.tsx
 var root_exports = {};
 __export(root_exports, {
   default: () => App,
@@ -442,7 +442,7 @@ function Document({ children }) {
   }), /* @__PURE__ */ React.createElement(import_remix2.Meta, null), /* @__PURE__ */ React.createElement(import_remix2.Links, null), typeof document === "undefined" ? "__cfg:STYLES__" : null), /* @__PURE__ */ React.createElement("body", null, children, /* @__PURE__ */ React.createElement(import_remix2.ScrollRestoration, null), /* @__PURE__ */ React.createElement(import_remix2.Scripts, null), /* @__PURE__ */ React.createElement(import_remix2.LiveReload, null)));
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/auth/$service.callback.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/auth/$service.callback.tsx
 var service_callback_exports = {};
 __export(service_callback_exports, {
   loader: () => loader
@@ -691,7 +691,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   auth.use(new import_remix_auth_google.GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3333/auth/google/callback"
+    callbackURL: "http://localhost:3333/auth/google/callback",
+    scope: "https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly openid profile email"
   }, async (profile) => profile), Service.google);
 }
 if (process.env.WRIKE_CLIENT_ID && process.env.WRIKE_CLIENT_SECRET) {
@@ -742,7 +743,7 @@ var authenticateUser = async (service, request, redirects) => {
   });
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/auth/$service.callback.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/auth/$service.callback.tsx
 var loader = async ({ request, params }) => {
   if (!params.service || !Object.keys(Service).includes(params.service)) {
     throw new Error("Unsupported Service");
@@ -754,7 +755,7 @@ var loader = async ({ request, params }) => {
   });
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/tasks/asset-inventory.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/tasks/asset-inventory.tsx
 var asset_inventory_exports = {};
 __export(asset_inventory_exports, {
   action: () => action,
@@ -1070,13 +1071,94 @@ async function parseReport(file) {
   return groups;
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/projects/clients.tsx
-var clients_exports = {};
-__export(clients_exports, {
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/tele-script-generator.tsx
+var tele_script_generator_exports = {};
+__export(tele_script_generator_exports, {
+  action: () => action2,
+  default: () => TeleScriptGenerator,
   loader: () => loader2
 });
 init_react();
 var import_remix6 = __toModule(require_remix());
+var import_react3 = __toModule(require("react"));
+var import_react4 = __toModule(require("react"));
+var import_Stack2 = __toModule(require("@mui/material/Stack"));
+var import_Button2 = __toModule(require("@mui/material/Button"));
+var import_TextField = __toModule(require("@mui/material/TextField"));
+var loader2 = async ({ request }) => {
+  const user = await getSessionUser(request);
+  if (!user) {
+    throw (0, import_remix6.redirect)("/login");
+  }
+  return { user: user.userId };
+};
+var action2 = async ({ request }) => {
+  const formData = await request.formData();
+  return { id: formData.get("spreadsheet-url") };
+};
+function TeleScriptGenerator() {
+  const [response, setResponse] = (0, import_react3.useState)();
+  const getResponse = async (id) => {
+    const found_response = await window.gapi.client.sheets.spreadsheets.get({
+      spreadsheetId: id,
+      includeGridData: true
+    });
+    setResponse(found_response);
+  };
+  const user = (0, import_remix6.useLoaderData)().user;
+  (0, import_react3.useEffect)(() => {
+    const handleClientLoad = () => window.gapi.load("client:auth2", initClient);
+    const initClient = () => {
+      console.log("client init");
+      const DISCOVERY_DOCS = [
+        "https://sheets.googleapis.com/$discovery/rest?version=v4",
+        "https://docs.googleapis.com/$discovery/rest?version=v1"
+      ];
+      const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/documents.readonly";
+      window.gapi.client.init({
+        apiKey: "AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c",
+        clientID: "172542640188-2h1gdq39vrva27gctk2e6hqtv0u4ct61.apps.googleusercontent.com",
+        discoveryDocs: DISCOVERY_DOCS,
+        scope: SCOPES
+      }).then(function() {
+        window.gapi.client.setToken(user);
+      });
+    };
+    const script = document.createElement("script");
+    script.src = "https://apis.google.com/js/api.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = handleClientLoad;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  });
+  return /* @__PURE__ */ import_react4.default.createElement(Page, {
+    title: "Teleprompter Script Generator:"
+  }, /* @__PURE__ */ import_react4.default.createElement(import_remix6.Form, {
+    method: "post"
+  }, /* @__PURE__ */ import_react4.default.createElement(import_Stack2.default, {
+    spacing: 2,
+    alignItems: "center",
+    justifyItems: "center"
+  }, /* @__PURE__ */ import_react4.default.createElement(import_TextField.default, {
+    name: "spreadsheet-url",
+    label: "Tracking Document (permalink)",
+    variant: "outlined"
+  }), /* @__PURE__ */ import_react4.default.createElement(import_Button2.default, {
+    variant: "contained",
+    type: "submit"
+  }, "Upload"))));
+}
+
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/projects/clients.tsx
+var clients_exports = {};
+__export(clients_exports, {
+  loader: () => loader3
+});
+init_react();
+var import_remix7 = __toModule(require_remix());
 
 // app/api/wrike/Client.server.ts
 init_react();
@@ -1501,7 +1583,7 @@ function createTaskTemplateClass(client) {
       return task;
     }
     async getCustomFields() {
-      const loader10 = async () => {
+      const loader13 = async () => {
         const { customFields } = this.raw ?? {};
         if (!customFields || customFields.length === 0) {
           return null;
@@ -1521,7 +1603,7 @@ function createTaskTemplateClass(client) {
           });
         }, {});
       };
-      this.CustomFieldsLoader = this.CustomFieldsLoader ?? loader10();
+      this.CustomFieldsLoader = this.CustomFieldsLoader ?? loader13();
       return this.CustomFieldsLoader;
     }
   };
@@ -1665,8 +1747,8 @@ var WrikeClient = class {
   }
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/projects/clients.tsx
-var loader2 = async ({ request }) => {
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/projects/clients.tsx
+var loader3 = async ({ request }) => {
   const url = new URL(request.url);
   const spaceId = url.searchParams.get("spaceId");
   const Wrike = await WrikeClient.forSession(request);
@@ -1674,26 +1756,26 @@ var loader2 = async ({ request }) => {
     throw new Response("Must have a spaceId", { status: 422 });
   }
   const folders = await Wrike.Folder.fromSpace(spaceId, { project: false });
-  return (0, import_remix6.json)({
+  return (0, import_remix7.json)({
     clients: folders.map((f) => ({ id: f.id, title: f.title }))
   });
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/projects/create.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/projects/create.tsx
 var create_exports = {};
 __export(create_exports, {
-  action: () => action2,
+  action: () => action3,
   default: () => Project,
   links: () => links2,
-  loader: () => loader3
+  loader: () => loader4
 });
 init_react();
 var import_react6 = __toModule(require("react"));
 var import_remix7 = __toModule(require_remix());
 var import_Autocomplete = __toModule(require("@mui/material/Autocomplete"));
-var import_Button2 = __toModule(require("@mui/material/Button"));
-var import_Stack2 = __toModule(require("@mui/material/Stack"));
-var import_TextField = __toModule(require("@mui/material/TextField"));
+var import_Button3 = __toModule(require("@mui/material/Button"));
+var import_Stack3 = __toModule(require("@mui/material/Stack"));
+var import_TextField2 = __toModule(require("@mui/material/TextField"));
 
 // app/components/InputBreadCrumb.tsx
 init_react();
@@ -1735,14 +1817,14 @@ function OnMount({ onMount, children }) {
   return /* @__PURE__ */ import_react5.default.createElement(import_react5.default.Fragment, null, children);
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/projects/create.tsx
-var loader3 = async ({ request }) => {
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/projects/create.tsx
+var loader4 = async ({ request }) => {
   const user = await getSessionUser(request);
   if (!user) {
-    throw (0, import_remix7.redirect)("/login");
+    throw (0, import_remix8.redirect)("/login");
   }
   if (!await user.hasCredentials(Service.wrike)) {
-    throw (0, import_remix7.redirect)("/connect");
+    throw (0, import_remix8.redirect)("/connect");
   }
   return null;
 };
@@ -1752,13 +1834,13 @@ var links2 = () => [
     href: "https://unpkg.com/filepond@^4/dist/filepond.css"
   }
 ];
-var action2 = async ({ request }) => {
+var action3 = async ({ request }) => {
   const wrike = await WrikeClient.forSession(request);
-  const UploadHandler = (0, import_remix7.unstable_createMemoryUploadHandler)({
+  const UploadHandler = (0, import_remix8.unstable_createMemoryUploadHandler)({
     maxFileSize: 1e7,
     filter: ({ mimetype }) => mimetype === "text/csv"
   });
-  const formData = await (0, import_remix7.unstable_parseMultipartFormData)(request, UploadHandler);
+  const formData = await (0, import_remix8.unstable_parseMultipartFormData)(request, UploadHandler);
   const file = formData.get("project-file");
   const text = await file.text();
   console.log("Got Form Data: ", text);
@@ -1766,7 +1848,7 @@ var action2 = async ({ request }) => {
 };
 function Project() {
   var _a, _b;
-  const spaces = (0, import_remix7.useFetcher)();
+  const spaces = (0, import_remix8.useFetcher)();
   const loadSpaces = useFetcherLoad(spaces, "/projects/spaces");
   const [space, setSpace] = (0, import_react6.useState)(null);
   const clients = (0, import_remix7.useFetcher)();
@@ -1776,7 +1858,7 @@ function Project() {
   const [files, setFiles] = (0, import_react6.useState)(void 0);
   return /* @__PURE__ */ React.createElement(Page, {
     title: "New Project"
-  }, /* @__PURE__ */ React.createElement(import_remix7.Form, {
+  }, /* @__PURE__ */ React.createElement(import_remix8.Form, {
     method: "post",
     encType: "multipart/form-data"
   }, /* @__PURE__ */ React.createElement(InputBreadCrumb, null, /* @__PURE__ */ React.createElement(OnMount, {
@@ -1797,7 +1879,7 @@ function Project() {
     options: ((_a = spaces.data) == null ? void 0 : _a.spaces) ?? [],
     getOptionLabel: (o) => o.title,
     isOptionEqualToValue: (o, v) => o.id === v.id,
-    renderInput: (params) => /* @__PURE__ */ React.createElement(import_TextField.default, __spreadProps(__spreadValues({}, params), {
+    renderInput: (params) => /* @__PURE__ */ React.createElement(import_TextField2.default, __spreadProps(__spreadValues({}, params), {
       label: "Space",
       variant: "standard"
     }))
@@ -1816,11 +1898,11 @@ function Project() {
     options: ((_b = clients.data) == null ? void 0 : _b.clients) ?? [],
     getOptionLabel: (o) => o.title,
     isOptionEqualToValue: (o, v) => o.id === v.id,
-    renderInput: (params) => /* @__PURE__ */ React.createElement(import_TextField.default, __spreadProps(__spreadValues({}, params), {
+    renderInput: (params) => /* @__PURE__ */ React.createElement(import_TextField2.default, __spreadProps(__spreadValues({}, params), {
       label: "Client",
       variant: "standard"
     }))
-  })), !client ? null : /* @__PURE__ */ React.createElement(import_TextField.default, {
+  })), !client ? null : /* @__PURE__ */ React.createElement(import_TextField2.default, {
     sx: {
       width: "100%",
       maxWidth: "300px"
@@ -1829,7 +1911,7 @@ function Project() {
     variant: "standard",
     key: "project",
     inputProps: projectNameProps
-  }), !hasProjectName ? null : /* @__PURE__ */ React.createElement(import_Stack2.default, {
+  }), !hasProjectName ? null : /* @__PURE__ */ React.createElement(import_Stack3.default, {
     spacing: 2,
     alignItems: "center",
     justifyItems: "center"
@@ -1838,7 +1920,7 @@ function Project() {
     storeAsFile: true,
     files,
     onupdatefiles: (items) => setFiles(items.map((f) => f.file))
-  }), /* @__PURE__ */ React.createElement(import_Button2.default, {
+  }), /* @__PURE__ */ React.createElement(import_Button3.default, {
     variant: "contained",
     type: "submit",
     disabled: !files || files.length === 0
@@ -1885,14 +1967,14 @@ function useBufferedInput() {
   };
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/projects/spaces.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/projects/spaces.tsx
 var spaces_exports = {};
 __export(spaces_exports, {
-  loader: () => loader4
+  loader: () => loader5
 });
 init_react();
-var import_remix8 = __toModule(require_remix());
-var loader4 = async ({ request }) => {
+var import_remix9 = __toModule(require_remix());
+var loader5 = async ({ request }) => {
   const user = await getSessionUser(request);
   const wrikeCred = await (user == null ? void 0 : user.getCredentials(Service.wrike));
   if (!wrikeCred) {
@@ -1900,21 +1982,21 @@ var loader4 = async ({ request }) => {
   }
   const Wrike = new WrikeClient(wrikeCred);
   const spaces = await Wrike.Space.getAll();
-  return (0, import_remix8.json)({
+  return (0, import_remix9.json)({
     spaces: spaces.map((s) => ({ id: s.id, title: s.title }))
   });
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/auth/$service.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/auth/$service.tsx
 var service_exports = {};
 __export(service_exports, {
-  action: () => action3,
-  loader: () => loader5
+  action: () => action4,
+  loader: () => loader6
 });
 init_react();
-var import_remix9 = __toModule(require_remix());
-var loader5 = () => (0, import_remix9.redirect)("/login");
-var action3 = async ({ request, params }) => {
+var import_remix10 = __toModule(require_remix());
+var loader6 = () => (0, import_remix10.redirect)("/login");
+var action4 = async ({ request, params }) => {
   if (!params.service || !Object.keys(Service).includes(params.service)) {
     throw new Error("Unsupported Service");
   }
@@ -1925,40 +2007,155 @@ var action3 = async ({ request, params }) => {
   });
 };
 
-// route:/Users/andrew.ligon/video-client/app/routes/video-batch.tsx
-var video_batch_exports = {};
-__export(video_batch_exports, {
-  action: () => action4,
-  default: () => VideoBatch,
-  loader: () => loader6
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/tsg-results.tsx
+var tsg_results_exports = {};
+__export(tsg_results_exports, {
+  default: () => TsgResults,
+  loader: () => loader7
 });
 init_react();
-var import_remix10 = __toModule(require_remix());
 var import_remix11 = __toModule(require_remix());
-var import_Button3 = __toModule(require("@mui/material/Button"));
-var import_Stack3 = __toModule(require("@mui/material/Stack"));
-var import_TextField2 = __toModule(require("@mui/material/TextField"));
-var loader6 = async ({ request }) => {
+var import_react8 = __toModule(require("react"));
+var loader7 = async ({ request }) => {
+  var _a;
   const user = await getSessionUser(request);
   if (!user) {
     throw (0, import_remix11.redirect)("/login");
   }
+  const { google } = require("googleapis");
+  const token = (_a = await user.getCredentials(Service.google)) == null ? void 0 : _a.accessToken;
+  const search = new URLSearchParams(new URL(request.url).search);
+  const params = {
+    url: search.get("url") ?? "",
+    sheet: search.get("sheet") != "" ? search.get("sheet") : "Master Review Tracker",
+    row: search.get("row") != "" ? search.get("row") : "5",
+    column: search.get("column") != "" ? search.get("column") : "I",
+    title: ""
+  };
+  const sheets = google.sheets("v4");
+  const spreadsheet = await sheets.spreadsheets.get({
+    oauth_token: token,
+    spreadsheetId: getIDFromURL(params.url),
+    includeGridData: true,
+    ranges: [`${params.sheet}!${params.column}${params.row}:${params.column}`]
+  });
+  const sheetData = collectLinksFromColumn(spreadsheet);
+  const links3 = sheetData.links.filter(String);
+  params.title = sheetData.title;
+  const docs = google.docs("v1");
+  let file_text = [];
+  for (let i = 0; i < links3.length; i++) {
+    const document2 = await docs.documents.get({
+      oauth_token: token,
+      documentId: links3[i]
+    });
+    file_text.push(extractTranscriptText(document2));
+  }
+  return { user: user.userId, sheetData: params, files: file_text };
+};
+function getIDFromURL(url) {
+  return new URL(url).pathname.split("/")[3];
+}
+function collectLinksFromColumn(response) {
+  let title = response.data.properties.title;
+  let rows = response.data.sheets[0].data[0].rowData;
+  let links3 = new Array(rows.length);
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i].values[0].hyperlink;
+    if (row) {
+      links3.push(getIDFromURL(row));
+    }
+  }
+  return { title, links: links3 };
+}
+function readParagraphElement(element) {
+  let text_run = element.textRun;
+  if (!text_run) {
+    return "";
+  }
+  return text_run.content;
+}
+function extractTranscriptText(response) {
+  let elements = response.data.body.content;
+  const columnIndex = 1;
+  let text = "";
+  let title = readParagraphElement(elements[1].paragraph.elements[0]);
+  text += title + "\n";
+  for (const value of elements) {
+    if ("table" in value) {
+      let table = value.table;
+      for (const row of table.tableRows) {
+        const cell = row.tableCells[columnIndex].content;
+        text += extractParagraphText(cell);
+      }
+    }
+  }
+  text = text.replace(/^\s*$(?:\r\n?|\n)/gm, "").replace(/$\n/gm, "\n\n");
+  return { "title": title, "text": text };
+}
+function extractParagraphText(element) {
+  let text = "";
+  for (const value of element) {
+    for (const elem of value.paragraph.elements) {
+      text += readParagraphElement(elem);
+    }
+  }
+  return text;
+}
+function TsgResults() {
+  const data = (0, import_remix11.useLoaderData)();
+  let fileLinks = [];
+  for (let i = 0; i < data.files.length - 1; i++) {
+    let text = data.files[i].text;
+    let title = data.files[i].title;
+    fileLinks.push(/* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("a", {
+      href: "data:text/plain;charset=utf-8," + encodeURIComponent(text),
+      download: title
+    }, title)));
+  }
+  return /* @__PURE__ */ import_react8.default.createElement(Page, {
+    title: "Teleprompter Script Generator Results:"
+  }, /* @__PURE__ */ import_react8.default.createElement("ul", {
+    style: { margin: "0px 50px" }
+  }, /* @__PURE__ */ import_react8.default.createElement("hr", null), /* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("strong", null, "Tracking Sheet: "), data.sheetData.title), /* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("strong", null, "Sheet: "), data.sheetData.sheet), /* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("strong", null, "Row: "), data.sheetData.row), /* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("strong", null, "Column: "), data.sheetData.column), /* @__PURE__ */ import_react8.default.createElement("li", null, /* @__PURE__ */ import_react8.default.createElement("strong", null, "Documents created: "), data.files.length), /* @__PURE__ */ import_react8.default.createElement("hr", null)), /* @__PURE__ */ import_react8.default.createElement("ul", {
+    style: { margin: "0px 50px" }
+  }, fileLinks));
+}
+
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/video-batch.tsx
+var video_batch_exports = {};
+__export(video_batch_exports, {
+  action: () => action5,
+  default: () => VideoBatch,
+  loader: () => loader8
+});
+init_react();
+var import_remix12 = __toModule(require_remix());
+var import_remix13 = __toModule(require_remix());
+var import_Button4 = __toModule(require("@mui/material/Button"));
+var import_Stack4 = __toModule(require("@mui/material/Stack"));
+var import_TextField3 = __toModule(require("@mui/material/TextField"));
+var loader8 = async ({ request }) => {
+  const user = await getSessionUser(request);
+  if (!user) {
+    throw (0, import_remix13.redirect)("/login");
+  }
   if (!await user.hasCredentials(Service.wrike)) {
-    throw (0, import_remix11.redirect)("/connect");
+    throw (0, import_remix13.redirect)("/connect");
   }
   return { user: user.userId };
 };
-var action4 = async ({ request }) => {
+var action5 = async ({ request }) => {
   const user = await getSessionUser(request);
   const wrikeCred = await (user == null ? void 0 : user.getCredentials(Service.wrike));
   if (!wrikeCred) {
     throw new Response("Forbidden", { status: 403 });
   }
-  const UploaderHandler = (0, import_remix10.unstable_createMemoryUploadHandler)({
+  const UploaderHandler = (0, import_remix12.unstable_createMemoryUploadHandler)({
     maxFileSize: 1e7,
     filter: ({ mimetype }) => mimetype === "text/csv"
   });
-  const formData = await (0, import_remix10.unstable_parseMultipartFormData)(request, UploaderHandler);
+  const formData = await (0, import_remix12.unstable_parseMultipartFormData)(request, UploaderHandler);
   const Wrike = new WrikeClient(wrikeCred);
   const batch = await Wrike.VideoBatch.fromPermaLink(formData.get("batch-task"));
   await batch.importCSV(formData.get("batch"), { headers: true });
@@ -1971,152 +2168,214 @@ var action4 = async ({ request }) => {
 function VideoBatch() {
   return /* @__PURE__ */ React.createElement(Page, {
     title: "Upload a video batch CSV file:"
-  }, /* @__PURE__ */ React.createElement(import_remix11.Form, {
+  }, /* @__PURE__ */ React.createElement(import_remix13.Form, {
     method: "post",
     encType: "multipart/form-data"
-  }, /* @__PURE__ */ React.createElement(import_Stack3.default, {
+  }, /* @__PURE__ */ React.createElement(import_Stack4.default, {
     spacing: 2,
     alignItems: "center",
     justifyItems: "center"
-  }, /* @__PURE__ */ React.createElement(import_TextField2.default, {
+  }, /* @__PURE__ */ React.createElement(import_TextField3.default, {
     name: "template-folder",
     label: "Template Folder (PermaLink)",
     variant: "outlined"
-  }), /* @__PURE__ */ React.createElement(import_TextField2.default, {
+  }), /* @__PURE__ */ React.createElement(import_TextField3.default, {
     name: "batch-task",
     label: "Batch Task (PermaLink)",
     variant: "outlined"
-  }), /* @__PURE__ */ React.createElement(import_TextField2.default, {
+  }), /* @__PURE__ */ React.createElement(import_TextField3.default, {
     name: "location",
     label: "Folder (PermaLink)",
     variant: "outlined"
   }), /* @__PURE__ */ React.createElement("input", {
     type: "file",
     name: "batch"
-  }), /* @__PURE__ */ React.createElement(import_Button3.default, {
+  }), /* @__PURE__ */ React.createElement(import_Button4.default, {
     variant: "contained",
     type: "submit"
   }, "Upload"))));
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/connect.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/connect.tsx
 var connect_exports = {};
 __export(connect_exports, {
   default: () => Connect,
-  loader: () => loader7
+  loader: () => loader9
 });
 init_react();
-var import_remix12 = __toModule(require_remix());
-var import_Button4 = __toModule(require("@mui/material/Button"));
-var import_Stack4 = __toModule(require("@mui/material/Stack"));
+var import_remix14 = __toModule(require_remix());
+var import_Button5 = __toModule(require("@mui/material/Button"));
+var import_Stack5 = __toModule(require("@mui/material/Stack"));
 var import_Add = __toModule(require("@mui/icons-material/Add"));
-var loader7 = async ({
+var loader9 = async ({
   request
 }) => {
   const user = await getSessionUser(request);
   if (!user) {
-    (0, import_remix12.redirect)("/login");
+    (0, import_remix14.redirect)("/login");
   }
   return {
     hasWrikeCred: Boolean(await (user == null ? void 0 : user.hasCredentials(Service.wrike)))
   };
 };
 function Connect() {
-  const { hasWrikeCred } = (0, import_remix12.useLoaderData)();
+  const { hasWrikeCred } = (0, import_remix14.useLoaderData)();
   return /* @__PURE__ */ React.createElement(Page, {
     title: "Connect your accounts:"
-  }, /* @__PURE__ */ React.createElement(import_Stack4.default, {
+  }, /* @__PURE__ */ React.createElement(import_Stack5.default, {
     spacing: 2,
     alignItems: "center",
     justifyItems: "center"
-  }, /* @__PURE__ */ React.createElement(import_remix12.Form, {
+  }, /* @__PURE__ */ React.createElement(import_remix14.Form, {
     action: "/auth/wrike",
     method: "post"
-  }, /* @__PURE__ */ React.createElement(import_Button4.default, {
+  }, /* @__PURE__ */ React.createElement(import_Button5.default, {
     startIcon: /* @__PURE__ */ React.createElement(import_Add.default, null),
     variant: "contained",
     type: "submit"
   }, hasWrikeCred ? "Connected to Wrike" : "Connect to Wrike"))));
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/index.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/index.tsx
 var routes_exports = {};
 __export(routes_exports, {
   default: () => Index,
-  loader: () => loader8
+  loader: () => loader10
 });
 init_react();
-var import_remix13 = __toModule(require_remix());
-var import_Button5 = __toModule(require("@mui/material/Button"));
-var import_Stack5 = __toModule(require("@mui/material/Stack"));
-var loader8 = async ({ request }) => {
+var import_remix15 = __toModule(require_remix());
+var import_Button6 = __toModule(require("@mui/material/Button"));
+var import_Stack6 = __toModule(require("@mui/material/Stack"));
+var loader10 = async ({ request }) => {
   const user = await getSessionUser(request);
   if (!user) {
-    throw (0, import_remix13.redirect)("/login");
+    throw (0, import_remix15.redirect)("/login");
   }
   return { user: user.userId };
 };
 function Index() {
   return /* @__PURE__ */ React.createElement(Page, {
     title: "Video Tooling:"
-  }, /* @__PURE__ */ React.createElement(import_Stack5.default, {
+  }, /* @__PURE__ */ React.createElement(import_Stack6.default, {
     spacing: 2,
     alignItems: "center",
     justifyItems: "center"
-  }, /* @__PURE__ */ React.createElement(import_remix13.Link, {
+  }, /* @__PURE__ */ React.createElement(import_remix15.Link, {
     to: "/projects/create"
-  }, /* @__PURE__ */ React.createElement(import_Button5.default, {
+  }, /* @__PURE__ */ React.createElement(import_Button6.default, {
     variant: "contained"
-  }, "New Project")), /* @__PURE__ */ React.createElement(import_remix13.Link, {
+  }, "New Project")), /* @__PURE__ */ React.createElement(import_remix15.Link, {
     to: "/video-batch"
-  }, /* @__PURE__ */ React.createElement(import_Button5.default, {
+  }, /* @__PURE__ */ React.createElement(import_Button6.default, {
     variant: "contained"
-  }, "Video Batch")), /* @__PURE__ */ React.createElement(import_remix13.Link, {
+  }, "Video Batch")), /* @__PURE__ */ React.createElement(import_remix15.Link, {
     to: "tasks/asset-inventory"
-  }, /* @__PURE__ */ React.createElement(import_Button5.default, {
+  }, /* @__PURE__ */ React.createElement(import_Button6.default, {
     variant: "contained"
-  }, "Asset Inventory"))));
+  }, "Asset Inventory")), /* @__PURE__ */ React.createElement(import_remix15.Link, {
+    to: "/tsg"
+  }, /* @__PURE__ */ React.createElement(import_Button6.default, {
+    variant: "contained"
+  }, "Teleprompter Script Generator"))));
 }
 
-// route:/Users/andrew.ligon/video-client/app/routes/login.tsx
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/login.tsx
 var login_exports = {};
 __export(login_exports, {
   default: () => Login,
-  loader: () => loader9
+  loader: () => loader11
 });
 init_react();
-var import_remix14 = __toModule(require_remix());
-var import_Button6 = __toModule(require("@mui/material/Button"));
-var import_Stack6 = __toModule(require("@mui/material/Stack"));
+var import_remix16 = __toModule(require_remix());
+var import_Button7 = __toModule(require("@mui/material/Button"));
+var import_Stack7 = __toModule(require("@mui/material/Stack"));
 var import_Google = __toModule(require("@mui/icons-material/Google"));
-var loader9 = async ({
+var loader11 = async ({
   request
 }) => {
   const user = await getSessionUser(request);
   const hasGoogleCred = user ? await user.hasCredentials(Service.google) : false;
   if (hasGoogleCred) {
-    (0, import_remix14.redirect)("/");
+    (0, import_remix16.redirect)("/");
   }
   return {
     hasGoogleCred
   };
 };
 function Login() {
-  const { hasGoogleCred } = (0, import_remix14.useLoaderData)();
+  const { hasGoogleCred } = (0, import_remix16.useLoaderData)();
   return /* @__PURE__ */ React.createElement(Page, {
     title: "Sign in to your NextThought account:"
-  }, /* @__PURE__ */ React.createElement(import_Stack6.default, {
+  }, /* @__PURE__ */ React.createElement(import_Stack7.default, {
     spacing: 2,
     alignItems: "center",
     justifyItems: "center"
-  }, /* @__PURE__ */ React.createElement(import_remix14.Form, {
+  }, /* @__PURE__ */ React.createElement(import_remix16.Form, {
     action: "/auth/google",
     method: "post"
-  }, /* @__PURE__ */ React.createElement(import_Button6.default, {
+  }, /* @__PURE__ */ React.createElement(import_Button7.default, {
     startIcon: /* @__PURE__ */ React.createElement(import_Google.default, null),
     variant: "contained",
     type: "submit"
   }, hasGoogleCred ? "Signed In To Google" : "Sign In To Google"))));
+}
+
+// route:/Users/sampenwell/Dev/VideoTech/nti.web.video-client/app/routes/tsg.tsx
+var tsg_exports = {};
+__export(tsg_exports, {
+  default: () => TeleScriptGenerator2,
+  loader: () => loader12
+});
+init_react();
+var import_remix17 = __toModule(require_remix());
+var import_react9 = __toModule(require("react"));
+var import_Stack8 = __toModule(require("@mui/material/Stack"));
+var import_TextField4 = __toModule(require("@mui/material/TextField"));
+var import_Button8 = __toModule(require("@mui/material/Button"));
+var loader12 = async ({ request }) => {
+  const user = await getSessionUser(request);
+  if (!user) {
+    throw (0, import_remix17.redirect)("/login");
+  }
+  return { user: user.userId };
+};
+function TeleScriptGenerator2() {
+  const transition = (0, import_remix17.useTransition)();
+  return /* @__PURE__ */ import_react9.default.createElement(Page, {
+    title: "TSG:"
+  }, /* @__PURE__ */ import_react9.default.createElement(import_remix17.Form, {
+    method: "get",
+    encType: "multipart/form-data",
+    action: "/tsg-results"
+  }, /* @__PURE__ */ import_react9.default.createElement(import_Stack8.default, {
+    spacing: 2,
+    alignItems: "center",
+    justifyItems: "center"
+  }, /* @__PURE__ */ import_react9.default.createElement(import_TextField4.default, {
+    name: "url",
+    label: "Spreadsheet URL",
+    variant: "outlined",
+    required: true,
+    disabled: transition.state === "submitting"
+  }), /* @__PURE__ */ import_react9.default.createElement(import_TextField4.default, {
+    name: "sheet",
+    label: "Sheet Name (optional)",
+    variant: "outlined",
+    disabled: transition.state === "submitting"
+  }), /* @__PURE__ */ import_react9.default.createElement(import_TextField4.default, {
+    name: "row",
+    label: "Starting Row (optional)",
+    variant: "outlined",
+    disabled: transition.state === "submitting"
+  }), /* @__PURE__ */ import_react9.default.createElement(import_TextField4.default, {
+    name: "column",
+    label: "Data Column (optional)",
+    variant: "outlined",
+    disabled: transition.state === "submitting"
+  }), /* @__PURE__ */ import_react9.default.createElement(import_Button8.default, {
+    type: "submit",
+    variant: "contained"
+  }, transition.state === "submitting" ? "Generating..." : "Generate"))));
 }
 
 // server-assets-manifest:@remix-run/dev/assets-manifest
@@ -2150,6 +2409,14 @@ var routes = {
     caseSensitive: void 0,
     module: asset_inventory_exports
   },
+  "routes/tele-script-generator": {
+    id: "routes/tele-script-generator",
+    parentId: "root",
+    path: "tele-script-generator",
+    index: void 0,
+    caseSensitive: void 0,
+    module: tele_script_generator_exports
+  },
   "routes/projects/clients": {
     id: "routes/projects/clients",
     parentId: "root",
@@ -2182,6 +2449,14 @@ var routes = {
     caseSensitive: void 0,
     module: service_exports
   },
+  "routes/tsg-results": {
+    id: "routes/tsg-results",
+    parentId: "root",
+    path: "tsg-results",
+    index: void 0,
+    caseSensitive: void 0,
+    module: tsg_results_exports
+  },
   "routes/video-batch": {
     id: "routes/video-batch",
     parentId: "root",
@@ -2213,6 +2488,14 @@ var routes = {
     index: void 0,
     caseSensitive: void 0,
     module: login_exports
+  },
+  "routes/tsg": {
+    id: "routes/tsg",
+    parentId: "root",
+    path: "tsg",
+    index: void 0,
+    caseSensitive: void 0,
+    module: tsg_exports
   }
 };
 
