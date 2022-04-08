@@ -2,7 +2,6 @@ import type {LoaderFunction} from "remix";
 import {Form, redirect, useTransition} from "remix";
 import {getSessionUser} from "~/api/auth.server";
 import Page from "~/components/Page";
-import {Service} from "~/api/models/Credential.server";
 import React from "react";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -14,15 +13,6 @@ export const loader: LoaderFunction = async ({request}) => {
 	if (!user) {
 		throw redirect("/login");
 	}
-	// const {google} = require('googleapis');
-	// const sheets = google.sheets('v4');
-	// const spreadsheet = await sheets.spreadsheets.values.get(
-	// 	{
-	// 		auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
-	// 		spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-	// 		range: 'Class Data!A2:E',
-	// 	}
-	// );
 
 	return {user: user.userId};
 };

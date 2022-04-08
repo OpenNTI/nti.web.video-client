@@ -75,8 +75,10 @@ function getIDFromURL(url: string) {
  * Collects all hyperlinks from a column within a given sheet in a given spreadsheet.
  * @param {object}  response    The response from the Google Spreadsheet API containing the spreadsheet data.
  *
- * @return {[string]} An array containing all the links found in the specified location.
+ * @return {[string]} An object containing the title of the spreadsheet, and an array containing all the links
+ * found in the specified location.
  */
+// TODO: should I use a different type for response?
 function collectLinksFromColumn(response: any) {
 	let title = response.data.properties.title;
 	let rows = response.data.sheets[0].data[0].rowData;
@@ -91,7 +93,7 @@ function collectLinksFromColumn(response: any) {
 }
 
 /**
- * Gets the text content from a paragraph element.
+ * Helper method the text content from a paragraph element in a Google Docs response object.
  * @param {object}  element The element within a paragraph object.
  *
  * @return The text content found in the element.
@@ -106,14 +108,14 @@ function readParagraphElement(element: any) {
 
 /**
  * Collects the text content from the second column in a script document.
- * @param  response The elements that make up the Doc object.
+ * @param  response Response object from Google api request
  *
  * @return An object that contains the title of the document, and a string containing the title and cell content of
  * the table, separated by two new lines.
  */
 function extractTranscriptText(response: any) {
 	// assume the transcript text is in the second column
-	// console.log(response);
+	// TODO: this need to check for column titles more intelligently
 	let elements = response.data.body.content;
 	const columnIndex: number = 1;
 	let text: string = '';
@@ -130,12 +132,11 @@ function extractTranscriptText(response: any) {
 		}
 	}
 	text = text.replace(/^\s*$(?:\r\n?|\n)/gm, '').replace(/$\n/gm, '\n\n');
-	// console.log("TITLE: ", title);
 	return {'title': title, 'text': text};
 }
 
 /**
- * Extracts all text from a structural element.
+ * Extracts all text from a structural element found in a Google Docs response object.
  * @param {object}  element The structural element that contains text.
  *
  * @return {string} A string containing all the text found in the element.
@@ -150,7 +151,11 @@ function extractParagraphText(element: any) {
 	return text;
 }
 
-
+/**
+ * Creates download links for each Google Docs text collected by the server from the Tracking Sheet.
+ * @constructor
+ * @return A document containing download links to all the text documents, as well as some information about the initial request.
+ */
 export default function TsgResults() {
 	// create download links for each Google Docs text collected by the server
 	const data = useLoaderData();
