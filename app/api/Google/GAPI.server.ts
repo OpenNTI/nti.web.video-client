@@ -1,4 +1,4 @@
-import {google} from 'googleapis';
+import {docs_v1, google} from 'googleapis';
 
 interface tsgParams {
 	column: string | null;
@@ -136,7 +136,10 @@ async function extractTranscriptText(token: string, documentId: string) {
 				for (const row of table.tableRows) {  // rows in the table
 					if (row.tableCells) {
 						const cell = row.tableCells[columnIndex].content;  // column in the row
-						text += extractParagraphText(cell);
+						if (cell) {
+							text += extractParagraphText(cell);
+						}
+
 					}
 				}
 			}
@@ -148,15 +151,17 @@ async function extractTranscriptText(token: string, documentId: string) {
 
 /**
  * Extracts all text from a structural element found in a Google Docs response object.
- * @param {object}  element The structural element that contains text.
+ * @param docs_v1.Schema$StructuralElement[]  element The structural element that contains text.
  *
  * @return {string} A string containing all the text found in the element.
  */
-function extractParagraphText(element: any) {
+function extractParagraphText(element: docs_v1.Schema$StructuralElement[]) {
 	let text: string = '';
 	for (const value of element) {
-		for (const elem of value.paragraph.elements) {
-			text += readParagraphElement(elem);
+		if (value.paragraph && value.paragraph.elements) {
+			for (const elem of value.paragraph.elements) {
+				text += readParagraphElement(elem);
+			}
 		}
 	}
 	return text;
@@ -164,11 +169,10 @@ function extractParagraphText(element: any) {
 
 /**
  * Helper method the text content from a paragraph element in a Google Docs response object.
- * @param {object}  element The element within a paragraph object.
+ * @param docs_v1.Schema$ParagraphElement  element The element within a paragraph object.
  *
  * @return The text content found in the element.
  */
-function readParagraphElement(element: any) {
-	const text_run = element.textRun;
+function readParagraphElement(element: docs_v1.Schema$ParagraphElement) {
 	return element?.textRun?.content ?? '';
 }
