@@ -6,5 +6,7 @@ node_modules
 /server/index.js
 /public/build
 
+/.idea
+
 sam.json
 sam.yaml
