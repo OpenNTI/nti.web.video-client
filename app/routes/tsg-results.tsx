@@ -5,6 +5,7 @@ import {getSessionUser} from "~/api/auth.server";
 import Page from "~/components/Page";
 import {Service} from "~/api/models/Credential.server";
 
+import GAPI from  "~/api/Google/GAPI.server";
 
 export const loader: LoaderFunction = async ({request}) => {
 
@@ -14,140 +15,15 @@ export const loader: LoaderFunction = async ({request}) => {
 		throw redirect("/login");
 	}
 
-	// TODO: importing google like this is probably not the best practice, I'll have to investigate to find a better option
-	// https://remix.run/docs/en/v1/pages/gotchas#server-code-in-client-bundles
-	// https://developers.google.com/docs/api/quickstart/nodejs
-	const {google} = require('googleapis');
+	// generate teleprompter script
 	const token = (await user.getCredentials(Service.google))?.accessToken;
-
-	// Collect URL parameters and set default values
-	// TODO: is there a better way to define default values?
-	const search = (new URL(request.url)).searchParams;
-	const params = {
-		url: search.get("url") ?? "",
-		sheet: search.get("sheet") != "" ? search.get("sheet") : "Master Review Tracker",
-		row: search.get("row") != "" ? search.get("row") : '5',
-		column: search.get("column") != "" ? search.get("column") : 'I',
-		title: ""
-
+	if (!token) {
+		throw new Error('Could not find GAPI access token.');
 	}
-
-	// collect list of script Doc links from the Tracking Document
-	const sheets = google.sheets('v4');
-	const spreadsheet = await sheets.spreadsheets.get(
-		{
-			// TODO: use the OAUTH token
-			auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
-			// oauth_token: token,
-			spreadsheetId: getIDFromURL(params.url),
-			includeGridData: true,
-			// ex: SheetName!I5:I
-			ranges: [`${params.sheet}!${params.column}${params.row}:${params.column}`]
-		}
-	);
-	const sheetData = collectLinksFromColumn(spreadsheet)
-	const links = sheetData.links.filter(String);
-	params.title = sheetData.title;
-
-	// collect title and text from each of the Google Docs links
-	const docs = google.docs('v1');
-	let file_text = [];
-	for (let i = 0; i < links.length; i++) {
-		const document = await docs.documents.get({
-			oauth_token: token,
-			documentId: links[i]
-		});
-		file_text.push(extractTranscriptText(document));
-	}
-
-	// return user data, sheet data, and list of files
-	return {user: user.userId, sheetData: params, files: file_text};
+	const gapi = new GAPI(request, token);
+	return gapi.generateTeleprompterScripts();
 };
 
-/**
- * Gets the spreadsheet or document ID from a URL.
- * @param {string}  url The URL to collect the ID from.
- */
-function getIDFromURL(url: string) {
-	return new URL(url).pathname.split('/')[3];
-}
-
-/**
- * Collects all hyperlinks from a column within a given sheet in a given spreadsheet.
- * @param {object}  response    The response from the Google Spreadsheet API containing the spreadsheet data.
- *
- * @return {[string]} An object containing the title of the spreadsheet, and an array containing all the links
- * found in the specified location.
- */
-// TODO: should I use a different type for response?
-function collectLinksFromColumn(response: any) {
-	const title = response.data.properties.title;
-	const rows = response.data.sheets[0].data[0].rowData;
-	const links: string[] = new Array(rows.length);
-	for (let i = 0; i < rows.length; i++) {
-		const row: string = rows[i].values[0].hyperlink;
-		if (row) {
-			links.push(getIDFromURL(row));
-		}
-	}
-	return {title: title, links: links};
-}
-
-/**
- * Helper method the text content from a paragraph element in a Google Docs response object.
- * @param {object}  element The element within a paragraph object.
- *
- * @return The text content found in the element.
- */
-function readParagraphElement(element: any) {
-	const text_run = element.textRun;
-	return element?.textRun?.content ?? '';
-}
-
-/**
- * Collects the text content from the second column in a script document.
- * @param  response Response object from Google api request
- *
- * @return An object that contains the title of the document, and a string containing the title and cell content of
- * the table, separated by two new lines.
- */
-function extractTranscriptText(response: any) {
-	// assume the transcript text is in the second column
-	// TODO: this need to check for column titles more intelligently
-	const elements = response.data.body.content;
-	const columnIndex: number = 1;
-	let text: string = '';
-	const title: string = readParagraphElement(elements[1].paragraph.elements[0]);
-	text += title + '\n';
-	// - - - - - - - - - -
-	for (const value of elements) {
-		if ('table' in value) {
-			const table = value.table;
-			for (const row of table.tableRows) {
-				const cell = row.tableCells[columnIndex].content;
-				text += extractParagraphText(cell);
-			}
-		}
-	}
-	text = text.replace(/^\s*$(?:\r\n?|\n)/gm, '').replace(/$\n/gm, '\n\n');
-	return {'title': title, 'text': text};
-}
-
-/**
- * Extracts all text from a structural element found in a Google Docs response object.
- * @param {object}  element The structural element that contains text.
- *
- * @return {string} A string containing all the text found in the element.
- */
-function extractParagraphText(element: any) {
-	let text: string = '';
-	for (const value of element) {
-		for (const elem of value.paragraph.elements) {
-			text += readParagraphElement(elem);
-		}
-	}
-	return text;
-}
 
 /**
  * Creates download links for each Google Docs text collected by the server from the Tracking Sheet.
