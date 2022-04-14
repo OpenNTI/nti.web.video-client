@@ -32,7 +32,7 @@ export default function Index() {
 				<Link to="tasks/asset-inventory">
 					<Button variant="contained">Asset Inventory</Button>
 				</Link>
-				<Link to={"/tsg"}>
+				<Link to="/tsg">
 					<Button variant="contained">Teleprompter Script Generator</Button>
 				</Link>
 			</Stack>

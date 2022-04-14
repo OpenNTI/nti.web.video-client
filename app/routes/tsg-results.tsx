@@ -1,12 +1,13 @@
 import type {LoaderFunction} from "remix";
 import {redirect, useLoaderData} from "remix";
+
 import {getSessionUser} from "~/api/auth.server";
 import Page from "~/components/Page";
 import {Service} from "~/api/models/Credential.server";
-import React from "react";
 
 
 export const loader: LoaderFunction = async ({request}) => {
+
 	// get session user
 	const user = await getSessionUser(request);
 	if (!user) {
@@ -21,7 +22,7 @@ export const loader: LoaderFunction = async ({request}) => {
 
 	// Collect URL parameters and set default values
 	// TODO: is there a better way to define default values?
-	const search = new URLSearchParams(new URL(request.url).search);
+	const search = (new URL(request.url)).searchParams;
 	const params = {
 		url: search.get("url") ?? "",
 		sheet: search.get("sheet") != "" ? search.get("sheet") : "Master Review Tracker",
@@ -36,8 +37,8 @@ export const loader: LoaderFunction = async ({request}) => {
 	const spreadsheet = await sheets.spreadsheets.get(
 		{
 			// TODO: use the OAUTH token
-			// auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
-			oauth_token: token,
+			auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
+			// oauth_token: token,
 			spreadsheetId: getIDFromURL(params.url),
 			includeGridData: true,
 			// ex: SheetName!I5:I
@@ -80,9 +81,9 @@ function getIDFromURL(url: string) {
  */
 // TODO: should I use a different type for response?
 function collectLinksFromColumn(response: any) {
-	let title = response.data.properties.title;
-	let rows = response.data.sheets[0].data[0].rowData;
-	let links: string[] = new Array(rows.length);
+	const title = response.data.properties.title;
+	const rows = response.data.sheets[0].data[0].rowData;
+	const links: string[] = new Array(rows.length);
 	for (let i = 0; i < rows.length; i++) {
 		const row: string = rows[i].values[0].hyperlink;
 		if (row) {
@@ -99,11 +100,8 @@ function collectLinksFromColumn(response: any) {
  * @return The text content found in the element.
  */
 function readParagraphElement(element: any) {
-	let text_run = element.textRun;
-	if (!text_run) {
-		return '';
-	}
-	return text_run.content;
+	const text_run = element.textRun;
+	return element?.textRun?.content ?? '';
 }
 
 /**
@@ -116,15 +114,15 @@ function readParagraphElement(element: any) {
 function extractTranscriptText(response: any) {
 	// assume the transcript text is in the second column
 	// TODO: this need to check for column titles more intelligently
-	let elements = response.data.body.content;
+	const elements = response.data.body.content;
 	const columnIndex: number = 1;
 	let text: string = '';
-	let title: string = readParagraphElement(elements[1].paragraph.elements[0]);
+	const title: string = readParagraphElement(elements[1].paragraph.elements[0]);
 	text += title + '\n';
 	// - - - - - - - - - -
 	for (const value of elements) {
 		if ('table' in value) {
-			let table = value.table;
+			const table = value.table;
 			for (const row of table.tableRows) {
 				const cell = row.tableCells[columnIndex].content;
 				text += extractParagraphText(cell);
@@ -161,8 +159,8 @@ export default function TsgResults() {
 	const data = useLoaderData();
 	let fileLinks = [];
 	for (let i = 0; i < data.files.length - 1; i++) {
-		let text = data.files[i].text;
-		let title = data.files[i].title;
+		const text = data.files[i].text;
+		const title = data.files[i].title;
 		fileLinks.push(<li><a href={'data:text/plain;charset=utf-8,' + encodeURIComponent(text)}
 							  download={title}>{title}</a></li>);
 	}
