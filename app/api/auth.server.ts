@@ -18,7 +18,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 				clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 				callbackURL: "http://localhost:3333/auth/google/callback",
 				scope: "https://www.googleapis.com/auth/documents.readonly" +
-					" https://www.googleapis.com/auth/spreadsheets.readonly openid profile email",
+					" https://www.googleapis.com/auth/spreadsheets.readonly " +
+					"https://www.googleapis.com/auth/drive.metadata.readonly openid profile email",
 			},
 			async (profile) => profile
 		),
