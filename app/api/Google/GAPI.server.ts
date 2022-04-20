@@ -58,7 +58,6 @@ function getIDFromURL(url: string) {
  * @return {[string]} An object containing the title of the spreadsheet, and an array containing all the links
  * found in the specified location.
  */
-// TODO: should I use a different type for response?
 async function collectLinksFromColumn(params: tsgParams) {
 	const googleSheets = google.sheets('v4');
 	const response = await googleSheets.spreadsheets.get(
@@ -88,7 +87,7 @@ async function collectLinksFromColumn(params: tsgParams) {
 		if (row.values) {
 			const link = row.values[0].hyperlink;
 			if (link) {
-				links?.push(getIDFromURL(link));
+				links.push(link);
 			}
 		} else {
 			console.log("Found row with no data");
@@ -100,19 +99,21 @@ async function collectLinksFromColumn(params: tsgParams) {
 
 /**
  * Collects the text content from the second column in a script document.
- * @param  	token:string		The OAuth token.
- * @param	documentId:string 	The id for the GoogleDoc.
+ * @param  	token:string	The OAuth token.
+ * @param	link:string 	The id for the GoogleDoc.
  *
  * @return An object that contains the title of the document, and a string containing the title and cell content of
  * the table, separated by two new lines.
  */
-async function extractTranscriptText(token: string, documentId: string) {
+async function extractTranscriptText(token: string, link: string) {
+
+	// query Google Docs for document data
+	const id = getIDFromURL(link);
 	const docs = google.docs('v1');
 	const response = await docs.documents.get({
 		oauth_token: token,
-		documentId: documentId,
+		documentId: id,
 	});
-
 	// validate response matches expected format
 	if (!response.data.body) {
 		throw Error("Failed to get data from Google Doc");
@@ -125,28 +126,89 @@ async function extractTranscriptText(token: string, documentId: string) {
 		throw Error("Failed to find title in Google Doc");
 	}
 	const title: string = readParagraphElement(elements[1].paragraph.elements[0]);
-	const columnIndex: number = 1;
+	let columnIndex: number;
 	let text: string = '';
 	text += title + '\n';
-	// - - - - - - - - - -
+	let warnings = "";
 	for (const value of elements) { // elements in the document
 		if (value.table) {
 			const table = value.table;
+			// The spoken content of the script will either be in the Script or Audio column. Default to last column.
+			let rowHeaders = {...extractTableHeaderRow(table)};
+			if (rowHeaders.Script) {
+				columnIndex = rowHeaders.Script;
+			} else if (rowHeaders.Audio) {
+				columnIndex = rowHeaders.Audio;
+			} else {
+				columnIndex = Object.keys(rowHeaders).length - 1;
+				warnings += `Could not find 'Audio' or 'Script' column to collect spoken word content. Used column ${columnIndex + 1} instead.`;
+			}
 			if (table.tableRows) {
 				for (const row of table.tableRows) {  // rows in the table
 					if (row.tableCells) {
-						const cell = row.tableCells[columnIndex].content;  // column in the row
+						const cell = row.tableCells[columnIndex].content;  // cell in the row
 						if (cell) {
 							text += extractParagraphText(cell);
 						}
-
 					}
 				}
 			}
 		}
 	}
 	text = text.replace(/^\s*$(?:\r\n?|\n)/gm, '').replace(/$\n/gm, '\n\n');
-	return {'title': title, 'text': text};
+	const lastModified = await getLastModifiedTime(id);
+	if (lastModified == "unknown") {
+		warnings += "\nCould not find last modified time."
+	}
+	let meta = {
+		"title": title,
+		"link": link,
+		"EstimatedVOMinutes": Math.round((text.trim().split(/\s+/).length / 150) * 100) / 100,
+		"lastModified": lastModified,
+		"warnings": warnings,
+	}
+	return {'title': title, 'text': text, 'meta': meta};
+}
+
+/**
+ *	Queries Google Drive for the last modified time for a document.
+ *	@param id: the document id.
+ *
+ * 	@return string	A string timestamp representation of the last modified date, or "N/A" if no date was found
+ */
+async function getLastModifiedTime(id: string) {
+	// query Google Drive to get the last modified time
+	const googleDrive = google.drive('v3');
+	const driveResponse = await googleDrive.files.get(
+		{
+			fileId: id,
+			// TODO: this needs to use OAUTH
+			auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
+			fields: "modifiedTime",
+		}
+	);
+	return driveResponse.data.modifiedTime? driveResponse.data.modifiedTime : "unknown";
+}
+
+/**
+ * Extracts the text value and column index from each cell in the first row of a Google Doc table.
+ * @param table: A table in a Google Doc.
+ *
+ * @return {Object} An object containing the header rows and their index. i.e. {Row1: 0, Row2: 1}
+ */
+function extractTableHeaderRow(table: docs_v1.Schema$Table) {
+	let foundColumns = {};
+	if (table.tableRows && table.tableRows[0] && table.tableRows[0].tableCells) {
+		const nRows = table.tableRows[0].tableCells.length;
+		for (let i = 0; i < nRows; i++) {
+			let cellContent = table.tableRows[0].tableCells[i].content
+			if (cellContent) {
+				let columnText = extractParagraphText(cellContent).trim();
+				foundColumns = {...foundColumns, ...{[columnText]: i}}
+			}
+		}
+	}
+	return foundColumns;
 }
 
 /**
