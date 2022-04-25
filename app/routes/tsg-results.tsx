@@ -38,7 +38,7 @@ export default function TsgResults() {
 	let fileLinks = [];
 	let metaJSON = [];
 	let zip = new JSZip();
-	for (let i = 0; i < data.files.length - 1; i++) {
+	for (let i = 0; i < data.files.length; i++) {
 		const text = data.files[i].text;
 		const title = data.files[i].title + '.txt';
 		metaJSON.push(data.files[i].meta);
