@@ -2008,7 +2008,6 @@ async function collectLinksFromColumn(params) {
       const link = row.values[0].hyperlink;
       if (link) {
         links3.push(link);
-        console.log("FOUND LINK: ", link);
       }
     } else {
       console.log("Found row with no data");
