@@ -32,19 +32,19 @@ export default function TeleScriptGenerator() {
 					/>
 					<TextField
 						name="sheet"
-						label="Sheet Name (optional)"
+						label="Sheet Name (Master Review Tracker)"
 						variant="outlined"
 						disabled={transition.state === "submitting"}
 					/>
 					<TextField
 						name="row"
-						label="Starting Row (optional)"
+						label="Starting Row (5)"
 						variant="outlined"
 						disabled={transition.state === "submitting"}
 					/>
 					<TextField
 						name="column"
-						label="Data Column (optional)"
+						label="Data Column (I)"
 						variant="outlined"
 						disabled={transition.state === "submitting"}
 					/>
