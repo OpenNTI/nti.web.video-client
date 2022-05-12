@@ -12,9 +12,9 @@ export default class GAPI {
 	params: tsgParams;
 	token: string;
 
-	constructor(request: Request, token: string) {
+	constructor(request: Request, token: string, formData: any) {
 		// Collect URL parameters and set default values
-		const search = (new URL(request.url)).searchParams;
+		const search = formData ? formData : (new URL(request.url)).searchParams
 		this.params = {
 			url: search.get("url") ?? "",
 			sheet: search.get("sheet") != "" ? search.get("sheet") : "Master Review Tracker",
@@ -39,6 +39,30 @@ export default class GAPI {
 
 		// return params and {title, text} for each doc found in the tracking sheet
 		return {sheetData: this.params, files: file_text};
+	}
+
+	async getLinksFromSheet() {
+		return await collectLinksFromColumn(this.params);
+	}
+
+	async getAllLinksInDocument(url: string) {
+		// source: https://gist.github.com/tanaikech/d3ce0c2186885ee27d23e02ddd2696b7
+		const id = getIDFromURL(url);
+		const docs = google.docs('v1');
+		const response = await docs.documents.get({
+			oauth_token: this.token,
+			// auth: 'AIzaSyBW4hVX-R3FAwOtAOtjSvPqWsBuYDCkX1c',
+			documentId: id,
+		});
+		if (!response.data.body.content) {
+			throw Error("Failed to find content in Google Doc body");
+		}
+		const content = response.data.body.content;
+		const urls = [];
+		JSON.parse(JSON.stringify(content), (k, v) => {
+			if (k == "url") urls.push(v);
+		});
+		return urls;
 	}
 }
 
@@ -187,7 +211,7 @@ async function getLastModifiedTime(id: string) {
 			fields: "modifiedTime",
 		}
 	);
-	return driveResponse.data.modifiedTime? driveResponse.data.modifiedTime : "unknown";
+	return driveResponse.data.modifiedTime ? driveResponse.data.modifiedTime : "unknown";
 }
 
 /**
@@ -238,3 +262,5 @@ function extractParagraphText(element: docs_v1.Schema$StructuralElement[]) {
 function readParagraphElement(element: docs_v1.Schema$ParagraphElement) {
 	return element?.textRun?.content ?? '';
 }
+
+

@@ -1,6 +1,6 @@
 import path from "path";
 
-import { useState } from "react";
+import {useState} from "react";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
@@ -17,13 +17,13 @@ import {
 	unstable_createMemoryUploadHandler,
 	unstable_parseMultipartFormData,
 } from "remix";
-import type { ActualFileObject } from "filepond";
+import type {ActualFileObject} from "filepond";
 import * as HTMLParser from "node-html-parser";
 
 import Page from "~/components/Page";
 import FileInput from "~/components/FileInput";
-import { useBlob, useObjectURL } from "~/components/hooks/use-object-url";
-import { getSessionUser } from "~/api/auth.server";
+import {useBlob, useObjectURL} from "~/components/hooks/use-object-url";
+import {getSessionUser} from "~/api/auth.server";
 import * as CSV from "~/api/utils/CSV.server";
 
 const VendorOrder = ["Getty Images", "Shutterstock", "Unknown"];
@@ -54,7 +54,7 @@ export const links: LinksFunction = () => [
 	},
 ];
 
-export const load: LoaderFunction = async ({ request }) => {
+export const load: LoaderFunction = async ({request}) => {
 	const user = await getSessionUser(request);
 
 	if (!user) {
@@ -62,7 +62,7 @@ export const load: LoaderFunction = async ({ request }) => {
 	}
 };
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({request}) => {
 	const UploadHandler = unstable_createMemoryUploadHandler({
 		maxFileSize: 10_000_000, //10mb?
 	});
@@ -74,7 +74,7 @@ export const action: ActionFunction = async ({ request }) => {
 
 	const file = formData.get("report") as File;
 	const report = await parseReport(file);
-
+	console.log("REPORT: ", report);
 	const projectName = report["Project name"];
 	const inventory = (await getAssetInventory(report)).sort(
 		(a, b) => VendorOrder.indexOf(a.vendor) - VendorOrder.indexOf(b.vendor)
@@ -138,7 +138,7 @@ export default function AssetInventory() {
 						alignItems="center"
 						justifyItems="center"
 					>
-						<CircularProgress />
+						<CircularProgress/>
 						<Typography variant="subtitle2">
 							Generating...
 						</Typography>
@@ -156,7 +156,7 @@ export default function AssetInventory() {
 						<Typography variant="subtitle2">
 							File &gt; Dependencies &gt; Collect Files
 						</Typography>
-						<br />
+						<br/>
 						<FileInput
 							name="report"
 							storeAsFile
@@ -180,7 +180,7 @@ const getHTML = async (url: string) => {
 	const text = await resp.text();
 
 	return HTMLParser.parse(text, {
-		blockTextElements: { style: false },
+		blockTextElements: {style: false},
 	});
 };
 
@@ -212,6 +212,11 @@ const TypesToExtension = {
 	audio: [".mp3", ".wav"],
 };
 
+const GettyAssetTypes: string = {
+	film: "video",
+	image: "photo"
+};
+
 const getTypeFromExtension = (
 	ext: string
 ): keyof typeof TypesToExtension | "unknown" => {
@@ -226,6 +231,7 @@ const getTypeFromExtension = (
 
 const GettyRegex = /^(gettyimages|GettyImages)\-(\d+)/;
 const ShutterRegex = /^(shutterstock)_(\d+)/;
+const ShutterURLRegex = /-(\d+)$/;
 
 const GettyArtistTitleBlackList: Record<string, boolean> = {
 	contributor: true,
@@ -238,17 +244,37 @@ const TitleCase = (s: string) => s.split(" ").map(Capitalize).join(" ");
 const InfoGetters = [
 	{
 		// Getty Images
-		handles: (filename: string, ext: string) => GettyRegex.test(filename),
-		info: async (filename: string, ext: string) => {
-			const match = filename.match(GettyRegex);
-			const id = match?.[2];
+		handles: (src: string) => {
+			const filename = path.basename(src, path.extname(src));
+			return src.startsWith("https://www.gettyimages.com") || GettyRegex.test(filename);
+		},
+		info: async (src: string) => {
+			let url = null;
+			let fileInfo = {};
+			if (src.startsWith("https://www.gettyimages.com")) {
+				url = src;
 
-			if (!id) {
-				throw new Error(`Unable to get GettyImage id: ${filename}`);
+			} else {
+				const filename = path.basename(src, path.extname(src));
+				const match = filename.match(GettyRegex);
+				const id = match?.[2];
+				fileInfo.fileName = filename;
+				if (!id) {
+					throw new Error(`Unable to get GettyImage id: ${filename}`);
+				}
+				url = `http://www.gettyimages.com/detail/${id}`;
 			}
 
-			const url = `http://www.gettyimages.com/detail/${id}`;
-			const html = await getHTML(url);
+			let html = null;
+			try {
+				html = await getHTML(url);
+			} catch {
+				return {
+					filename: "Unable to get Getty Images asset details",
+					url: url
+				}
+			}
+
 
 			const assetDetailsScript = html.querySelector(
 				'script[data-component="assetdetail"]'
@@ -258,47 +284,74 @@ const InfoGetters = [
 				? JSON.parse(assetDetailsScript.text)
 				: null;
 
+
 			if (!assetDetails) {
-				throw new Error(
-					`Unable to get Getty Images asset details: ${url}`
-				);
+				return {
+					filename: "Unable to get Getty Images asset details",
+					url: url
+				}
 			}
 
 			return {
 				vendor: "Getty Images",
-				code: id,
+				code: assetDetails.asset.id,
 				url,
-
+				type: GettyAssetTypes[assetDetails.asset.assetType] || "Unknown",
 				headline: assetDetails.asset.title,
-				creditline: Getty[assetDetails.asset.artistTitle]
+				creditline: assetDetails.asset.artistTitle
 					? assetDetails.asset.photographer
 					: `${assetDetails.asset.photographer} / ${TitleCase(
-							assetDetails.asset.artistTitle
-					  )}`,
+						assetDetails.asset.artistTitle
+					)}`,
 				collection: assetDetails.asset.collectionDisplayName,
+				...fileInfo
 			};
 		},
 	},
 	{
 		//Shutterstock
-		handles: (filename: string, ext: string) => ShutterRegex.test(filename),
-		info: async (filename: string, ext: string) => {
-			const match = filename.match(ShutterRegex);
-			const id = match?.[2];
+		handles: (src: string) => {
+			const filename = path.basename(src, path.extname(src));
+			return src.startsWith("https://www.shutterstock.com") || ShutterRegex.test(filename);
+		},
+		info: async (src: string) => {
+			let url = null;
+			if (src.startsWith("https://www.shutterstock.com")) {
+				url = src;
+			} else {
+				const filename = path.basename(src, path.extname(src));
+				const match = filename.match(ShutterRegex);
+				const id = match?.[2];
+				if (!id) {
+					return {
+						url: url,
+						headline: `Unable to get ShutterStock Image info.`
+					};
+				}
 
-			if (!id) {
-				throw new Error("Unable to get ShutterStock id: ${filename}");
+				url = `https://www.shutterstock.com/image-photo/${id}`;
+			}
+			let imageObject = null;
+			try {
+				imageObject = await getImageObjectLinkData(url);
+			} catch {
+				return {
+					url: url,
+					headline: `Unable to get ShutterStock image info.`
+				};
 			}
 
-			const url = `https://www.shutterstock.com/image-photo/${id}`;
-
-			const imageObject = await getImageObjectLinkData(url);
-
+			url = imageObject.contentUrl;
+			const extension = path.extname(url);
+			const filename = path.basename(url, extension);
+			const match = filename.match(ShutterURLRegex);
+			const id = match?.[1];
 			return {
 				vendor: "Shutterstock",
 				code: id,
 				url,
-
+				filename,
+				type: getTypeFromExtension(extension),
 				headline: headlineFromImageObect(imageObject),
 				creditline: creditlineFromImageObject(imageObject),
 			};
@@ -316,36 +369,36 @@ const InfoGetters = [
 	},
 ];
 
-async function getAssetInventory(
+export async function getAssetInventory(
 	report: Record<string, string[]>
 ): Promise<Inventory[]> {
 	const sources = report["Collected source files"] as string[];
-
 	const inventories = sources.reduce(
 		(acc: Promise<Inventory>[], source: string) => {
-			const extension = path.extname(source);
-			const filename = path.basename(source, extension);
+
 
 			const getter = InfoGetters.find((g) =>
-				g.handles(filename, extension)
+				g.handles(source)
 			);
 
 			if (!getter) {
+				const extension = path.extname(source)
+				const filename = path.basename(source, extension);
 				return [
 					...acc,
 					Promise.resolve({
 						type: getTypeFromExtension(extension),
 						vendor: "Unknown",
-						filename: path.basename(source),
+						filename: filename,
+						source: source,
 					}),
 				];
 			}
 
 			return [
 				...acc,
-				getter.info(filename, extension).then((info) => ({
-					type: getTypeFromExtension(extension),
-					filename: path.basename(source),
+				getter.info(source).then((info) => ({
+					source: source,
 					...info,
 				})),
 			];
@@ -368,7 +421,7 @@ async function parseReport(file: File) {
 		const parts = line.split("\t");
 		const depth = parts.length - 1;
 		const lineText = parts[depth].trim();
-
+		console.log("PARTS: ", parts);
 		if (depth === 0) {
 			const [name, value] = lineText.split(":");
 

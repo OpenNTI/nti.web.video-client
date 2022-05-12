@@ -23,7 +23,7 @@ export const loader: LoaderFunction = async ({request}) => {
 	if (!token) {
 		throw new Error('Could not find GAPI access token.');
 	}
-	const gapi = new GAPI(request, token);
+	const gapi = new GAPI(request, token, null);
 	return gapi.generateTeleprompterScripts();
 };
 
@@ -47,8 +47,6 @@ export default function TsgResults() {
 							  download={title}>{title}</a></li>);
 	}
 	const { Parser } = require('json2csv');
-	// const fields = ['title', 'link', 'warnings', 'EstimatedVOMinutes']
-
 	const parser = new Parser()
 	const csv = parser.parse(metaJSON);
 	zip.file("meta.json", JSON.stringify(metaJSON));
@@ -67,7 +65,7 @@ export default function TsgResults() {
 	return (
 		<Page title="Teleprompter Script Generator Results">
 			<Stack spacing={2} alignItems="center" justifyItems="center">
-				<Button variant="contained" onClick={downloadAll}>Download All Documents</Button>
+				<Button variant="contained" onClick={this.downloadAll}>Download All Documents</Button>
 			</Stack>
 			<ul style={{margin: "0px 50px"}}>
 				<hr/>
